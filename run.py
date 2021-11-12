@@ -1,26 +1,25 @@
 import telebot
-from telebot import types
+from classes import Student
 from config import *
 from functions import *
-from classes import Student
+from variables import *
 
 bot = telebot.TeleBot(TOKEN)
-keyboard_back = types.InlineKeyboardMarkup()
-keyboard_back.add(types.InlineKeyboardButton('Назад', callback_data='menu'))
 
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
-    bot.send_message(message.chat.id, "Привет! Я твой виртуальный помощник на осенней Неделе Карьеры ВШБ. "
-                                      "Для начала работы нужно зарегистрироваться. Введи, пожалуйста, свои ФИО "
-                                      "полностью:", reply_markup=types.ReplyKeyboardRemove())
-    print(message.from_user.username)
+    if message.chat.id in STUDENTS.keys():
+        bot.send_message(message.chat.id, 'Ты уже зарегистрировался! Хочешь внести изменения в свой профиль?',
+                         reply_markup=keyboard_changes)
+        return
+    bot.send_message(message.chat.id, welcome)
+    print(f'Пользователь {message.from_user.username} запустил бота')
     bot.register_next_step_handler(message, reg_name)
 
 
 def reg_name(message):
-    fio = message.text
-    if not check_name(fio):
+    if not check_name(message):
         bot.send_message(message.chat.id, 'Пожалуйста, введи ФИО еще раз в корректном формате!')
         bot.register_next_step_handler(message, reg_name)
         return
@@ -29,41 +28,69 @@ def reg_name(message):
     STUDENTS[message.chat.id] = new_student
     bot.send_message(message.chat.id, 'Теперь введи электронную почту, с которой будешь регистрироваться'
                                       ' на вебинары Недели Карьеры:')
-    update_phase(message, EMAIL)
     bot.register_next_step_handler(message, reg_email)
 
 
-@bot.message_handler(func=lambda message: get_phase(message) == EMAIL)
-def reg_email(message):
-    a = check_email(message.text)
-    if not a:
-        bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
-        a = check_email(message.text)
+def new_name(message):
+    if message.text == 'Что ты хочешь изменить?':
+        bot.send_message(message.chat.id, 'Введи корректные ФИО:')
+        bot.register_next_step_handler(message, new_name)
         return
-    bot.send_message(message.chat.id, 'Во время Недели Карьеры действует валюта ВШБ - коины. Их можно обменивать на'
-                                      ' мерч. Чтобы заработать коины, нужно участвовать в вебинарах и проявлять '
-                                      'активность. После регистрации тебе доступно {} коинов.'.format(default_balance))
+    if not check_name(message):
+        bot.send_message(message.chat.id, 'Пожалуйста, введи ФИО еще раз в корректном формате!')
+        bot.register_next_step_handler(message, new_name)
+        return
+    bot.send_message(message.chat.id, 'Данные успешно обновлены!', reply_markup=keyboard_back_menu)
+    STUDENTS[message.chat.id].fio = message.text
+    update_phase(message, READY)
+
+
+@bot.message_handler(func=lambda message: get_phase(message) == REG)
+def reg_email(message):
+    if not check_email(message):
+        bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
+        bot.register_next_step_handler(message, reg_email)
+        return
+    bot.send_message(message.chat.id, about_coins)
     STUDENTS[message.chat.id].email = message.text
-    update_phase(message, PROMO)
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
-    keyboard.add(types.InlineKeyboardButton(text='Да', callback_data='activate_promo'),
-                 types.InlineKeyboardButton(text='Нет', callback_data='skip_activate_promo'))
-    bot.send_message(message.chat.id, 'У тебя есть промокод от других участников Недели Карьеры?',
-                     reply_markup=keyboard)
+    print(f'Зарегистрирован студент {STUDENTS[message.chat.id]}')
+    update_phase(message, GIVE_PROMO)
+    bot.send_message(message.chat.id, 'У тебя есть промокод от других участников Недели Карьеры? При его активации ты '
+                                      'получишь 5 коинов.',
+                     reply_markup=keyboard_promo)
 
 
-@bot.message_handler(func=lambda message: get_phase(message) == PROMO)
+def new_email(message):
+    if message.text == 'Что ты хочешь изменить?':
+        bot.send_message(message.chat.id, 'Введи корректную электронную почту:')
+        bot.register_next_step_handler(message, new_email)
+        return
+    if not check_email(message):
+        bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
+        bot.register_next_step_handler(message, new_email)
+        return
+    STUDENTS[message.chat.id].email = message.text
+    update_phase(message, READY)
+    bot.send_message(message.chat.id, 'Данные успешно обновлены!', reply_markup=keyboard_back_menu)
+
+
+@bot.message_handler(func=lambda message: get_phase(message) == GIVE_PROMO)
 def new_promo(message):
-    new_code = new_promo_code(message)
     kb = types.InlineKeyboardMarkup()
     kb.add(types.InlineKeyboardButton(text='Дальше', callback_data='menu'))
     bot.send_message(message.chat.id, f'Это твой уникальный промокод. Если другой участник при регистрации его'
-                                      f' активирует, ты получишь 50 коинов. Промокод действителен на 5 применений:\n\n')
-    bot.send_message(message.chat.id, f'*{new_code}*', reply_markup=kb, parse_mode="Markdown")
+                                      f' активирует, ты также получишь 5 коинов. Приглашай друзей участвовать в Неделе '
+                                      f'Карьеры ВШБ! Промокод действителен на 5 применений:')
+    bot.send_message(message.chat.id, f'*{STUDENTS[message.chat.id].given_promo_code}*',
+                     reply_markup=kb, parse_mode="Markdown")
     update_phase(message, READY)
 
 
 def activate_promo(message):
+    if get_phase(message) != ENTER_PROMO:
+        update_phase(message, READY)
+        bot.register_next_step_handler(message, menu)
+        return
     code = message.text
     if code not in promo_codes.keys():
         if code == 'menu' or code == 'Меню':
@@ -71,29 +98,37 @@ def activate_promo(message):
         bot.send_message(message.chat.id, 'Введенный промокод недействителен! Попробуй ввести другой',
                          reply_markup=keyboard_back)
         bot.register_next_step_handler(message, activate_promo)
+    elif STUDENTS[message.chat.id].bool_promo_code:
+        bot.send_message(message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
         return
-    promo_codes[code][1] = True
-    STUDENTS[message.chat.id].balance += 50
-    bot.send_message(message.chat.id, 'Промокод успешно активирован! На твой счет зачислено 50 коинов')
+    elif code == STUDENTS[message.chat.id].given_promo_code:
+        bot.send_message(message.chat.id, 'Ты не можешь активировать промокод, выданный тебе :(',
+                         reply_markup=keyboard_back)
+    else:
+        promo_codes[code] += 1
+        STUDENTS[message.chat.id].balance += 50
+        print(STUDENTS)
+        STUDENTS[message.chat.id].bool_promo_code = True
+        bot.send_message(message.chat.id, 'Промокод успешно активирован! На твой счет зачислено 50 коинов')
+        update_phase(message, READY)
+
+
+@bot.message_handler(func=lambda message: get_phase(message) == READY)
+def handle_wrong_text(message):
+    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйтесь кнопками меню:')
+    menu(message)
 
 
 @bot.message_handler(func=lambda message: message.text == 'Меню')
-@bot.message_handler(func=lambda message: get_phase(message) == READY)
 def menu(message):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    b1 = types.InlineKeyboardButton(text='Посмотреть календарь вебинаров', callback_data='event_calendar')
-    b2 = types.InlineKeyboardButton(text='Посмотреть список работодателей', callback_data='companies')
-    b3 = types.InlineKeyboardButton(text='Посмотреть свой баланс', callback_data='balance')
-    b4 = types.InlineKeyboardButton(text='Активировать промокод', callback_data='activate_promo')
-    b5 = types.InlineKeyboardButton(text='Информация о боте и Неделе Карьеры', callback_data='info')
-    keyboard.add(b1, b2, b3, b4, b5)
-    bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard)
+    bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu)
 
 
-@bot.callback_query_handler(func=lambda call: get_phase(call.message) == PROMO)
+@bot.callback_query_handler(func=lambda call: get_phase(call.message) == GIVE_PROMO or call.data == 'activate_promo')
 def is_promo_needed(call):
     if call.data == 'activate_promo':
         bot.send_message(call.message.chat.id, 'Введи твой промокод:')
+        update_phase(call.message, ENTER_PROMO)
         bot.register_next_step_handler(call.message, activate_promo)
     elif call.data == 'skip_activate_promo':
         new_promo(call.message)
@@ -105,6 +140,7 @@ def handle_back(call):
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                           text=f'{call.message.text}',
                           reply_markup=None, parse_mode="Markdown")
+    update_phase(call.message, READY)
     menu(call.message)
     bot.answer_callback_query(callback_query_id=call.id)
 
@@ -112,27 +148,14 @@ def handle_back(call):
 @bot.callback_query_handler(func=lambda call: get_phase(call.message) == READY)
 def handle_menu(call):
     if call.data == 'event_calendar':
-        data = event_calendar()
-        res = ''
-        for key, val in data.items():
-            res += f'{key} состоится {val[0]} по ссылке *{val[1]}*' + '\n'
-        bot.send_message(call.message.chat.id, res, parse_mode="Markdown", reply_markup=keyboard_back)
+        bot.send_message(call.message.chat.id, events, parse_mode="Markdown", reply_markup=keyboard_back)
     elif call.data == 'companies':
-        data = companies_list()
-        keyboard = types.InlineKeyboardMarkup(row_width=3)
-        for key, val in data.items():
-            new_button = types.InlineKeyboardButton(text=key, callback_data=key)
-            keyboard.add(new_button)
-        keyboard.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
         bot.send_message(call.message.chat.id, 'Вот список компаний, сотрудничающих с ВШБ на осенней Неделе Карьеры. '
                                                'Нажмите на кнопку, чтобы почитать про компанию подробнее. ',
-                         reply_markup=keyboard)
+                         reply_markup=keyboard_companies)
     elif call.data == 'balance':
         ans = STUDENTS[call.message.chat.id].get_balance()
         bot.send_message(call.message.chat.id, ans, reply_markup=keyboard_back)
-    elif call.data == 'activate_promo':
-        bot.send_message(call.message.chat.id, 'Введи промокод:')
-        bot.register_next_step_handler(call.message, activate_promo)
     elif call.data == 'info':
         bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back)
     elif call.data in companies.keys():
@@ -140,14 +163,50 @@ def handle_menu(call):
             if call.data == key:
                 bot.send_message(call.message.chat.id, val, reply_markup=keyboard_back)
                 break
+    elif call.data == 'change_reg':
+        bot.send_message(call.message.chat.id, f"Данные твоего профиля сейчас:\n\n"
+                                               f"Твои ФИО:\n*{STUDENTS[call.message.chat.id].fio}*\n\n"
+                                               f"Твоя электронная почта:\n*{STUDENTS[call.message.chat.id].email}*"
+                                               f"\n\nОбрати внимание, что твоя почта должна совпадать с той, с которой "
+                                               f"ты будешь регистрироваться на вебинары Недели Карьеры. В противном "
+                                               f"случае мы не сможем начислить тебе коины :(", parse_mode='MarkDown')
+        bot.send_message(call.message.chat.id, 'Ты хочешь отредактировать свой профиль?',
+                         reply_markup=keyboard_changes)
+        update_phase(call.message, CHANGE_REG_1)
+    else:
+        bot.send_message(call.message.chat.id, 'Пожалуйста, воспользуйтесь кнопками меню:')
+        menu(call.message)
     bot.answer_callback_query(callback_query_id=call.id)
 
 
-@bot.message_handler(content_types='text', func=lambda message: get_phase(message) != PROMO)
-def handle_wrong_text(message):
-    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйтесь кнопками меню:')
-    menu(message)
+@bot.callback_query_handler(func=lambda call: get_phase(call.message) == CHANGE_REG_1)
+def check_reg(call):
+    if call.data == 'changes_needed':
+        update_phase(call.message, CHANGE_REG_2)
+        bot.send_message(call.message.chat.id, 'Что ты хочешь изменить?', reply_markup=keyboard_change_reg)
+    elif call.data == 'no_changes_needed':
+        update_phase(call.message, READY)
+        bot.send_message(call.message.chat.id, 'Изменения не внесены.', reply_markup=keyboard_back_menu)
+    bot.answer_callback_query(callback_query_id=call.id)
 
 
+@bot.callback_query_handler(func=lambda call: get_phase(call.message) == CHANGE_REG_2)
+def change_reg(call):
+    if call.data == 'change_fio':
+        new_name(call.message)
+    elif call.data == 'change_email':
+        new_email(call.message)
+    bot.answer_callback_query(callback_query_id=call.id)
 
-bot.infinity_polling()
+
+@bot.message_handler(
+    content_types=["audio", "document", "photo", "sticker", "video", "video_note", "voice", "location", "contact",
+                   "new_chat_members", "left_chat_member", "new_chat_title", "new_chat_photo", "delete_chat_photo",
+                   "group_chat_created", "supergroup_chat_created", "channel_chat_created", "migrate_to_chat_id",
+                   "migrate_from_chat_id", "pinned_message"])
+def send_sticker(message):
+    sticker = open(r'C:\Users\Vera\PycharmProjects\telegram\venv\sticker_hse.webp', 'rb')
+    bot.send_sticker(message.chat.id, sticker)
+
+
+bot.infinity_polling(timeout=None)
