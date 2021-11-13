@@ -1,5 +1,4 @@
 import telebot
-from classes import Student
 from config import *
 from functions import *
 from variables import *
@@ -7,7 +6,7 @@ from variables import *
 bot = telebot.TeleBot(TOKEN)
 
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start'])
 def start(message):
     if message.chat.id in STUDENTS.keys():
         bot.send_message(message.chat.id, 'Ты уже зарегистрировался! Хочешь внести изменения в свой профиль?',
@@ -19,36 +18,10 @@ def start(message):
     bot.register_next_step_handler(message, reg_name)
 
 
-def reg_name(message):
-    if not check_name(message):
-        bot.send_message(message.chat.id, 'Пожалуйста, введи ФИО еще раз в корректном формате!')
-        bot.register_next_step_handler(message, reg_name)
-        return
-    fio = message.text
-    new_student = Student(fio)
-    STUDENTS[message.chat.id] = new_student
-    bot.send_message(message.chat.id, 'Теперь введи электронную почту, с которой будешь регистрироваться'
-                                      ' на вебинары Недели Карьеры:')
-    bot.register_next_step_handler(message, reg_email)
-
-
-def new_name(message):
-    if message.text == 'Что ты хочешь изменить?':
-        bot.send_message(message.chat.id, 'Введи корректные ФИО:')
-        bot.register_next_step_handler(message, new_name)
-        return
-    if not check_name(message):
-        bot.send_message(message.chat.id, 'Пожалуйста, введи ФИО еще раз в корректном формате!')
-        bot.register_next_step_handler(message, new_name)
-        return
-    bot.send_message(message.chat.id, 'Данные успешно обновлены!', reply_markup=keyboard_back_menu)
-    STUDENTS[message.chat.id].fio = message.text
-    update_phase(message, READY)
-
-
 @bot.message_handler(func=lambda message: get_phase(message) == REG)
 def reg_email(message):
     if not check_email(message):
+        bot.delete_message(message.chat.id, message_id=message.id)
         bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
         bot.register_next_step_handler(message, reg_email)
         return
@@ -61,20 +34,6 @@ def reg_email(message):
                      reply_markup=keyboard_promo)
 
 
-def new_email(message):
-    if message.text == 'Что ты хочешь изменить?':
-        bot.send_message(message.chat.id, 'Введи корректную электронную почту:')
-        bot.register_next_step_handler(message, new_email)
-        return
-    if not check_email(message):
-        bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
-        bot.register_next_step_handler(message, new_email)
-        return
-    STUDENTS[message.chat.id].email = message.text
-    update_phase(message, READY)
-    bot.send_message(message.chat.id, 'Данные успешно обновлены!', reply_markup=keyboard_back_menu)
-
-
 @bot.message_handler(func=lambda message: get_phase(message) == GIVE_PROMO)
 def new_promo(message):
     kb = types.InlineKeyboardMarkup()
@@ -85,33 +44,6 @@ def new_promo(message):
     bot.send_message(message.chat.id, f'*{STUDENTS[message.chat.id].given_promo_code}*',
                      reply_markup=kb, parse_mode="Markdown")
     update_phase(message, READY)
-
-
-def activate_promo(message):
-    if get_phase(message) != ENTER_PROMO:
-        update_phase(message, READY)
-        bot.register_next_step_handler(message, menu)
-        return
-    code = message.text
-    if code not in promo_codes.keys():
-        if code == 'menu' or code == 'Меню':
-            return
-        bot.send_message(message.chat.id, 'Введенный промокод недействителен! Попробуй ввести другой',
-                         reply_markup=keyboard_back)
-        bot.register_next_step_handler(message, activate_promo)
-    elif STUDENTS[message.chat.id].bool_promo_code:
-        bot.send_message(message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
-        return
-    elif code == STUDENTS[message.chat.id].given_promo_code:
-        bot.send_message(message.chat.id, 'Ты не можешь активировать промокод, выданный тебе :(',
-                         reply_markup=keyboard_back)
-    else:
-        promo_codes[code] += 1
-        STUDENTS[message.chat.id].balance += 50
-        print(STUDENTS)
-        STUDENTS[message.chat.id].bool_promo_code = True
-        bot.send_message(message.chat.id, 'Промокод успешно активирован! На твой счет зачислено 50 коинов')
-        update_phase(message, READY)
 
 
 @bot.message_handler(func=lambda message: get_phase(message) == READY)
@@ -212,8 +144,10 @@ def change_reg(call):
                    "group_chat_created", "supergroup_chat_created", "channel_chat_created", "migrate_to_chat_id",
                    "migrate_from_chat_id", "pinned_message"])
 def send_sticker(message):
-    sticker = open(r'C:\Users\Vera\PycharmProjects\telegram\venv\sticker_hse.webp', 'rb')
+    sticker = open('./sticker_hse.webp', 'rb')
     bot.send_sticker(message.chat.id, sticker)
 
 
-bot.infinity_polling(timeout=None)
+if __name__ == '__main__':
+    set_env_functions(bot)
+    bot.infinity_polling(timeout=None)

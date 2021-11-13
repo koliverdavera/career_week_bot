@@ -1,15 +1,34 @@
 from variables import *
-from functions import generate_code
 import datetime
+import random
+
+
+def generate_code(length=8):
+    alphabet = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+    code = ''
+    for _ in range(length):
+        code += alphabet[random.randint(0, len(alphabet) - 1)]
+    return code
+
+
+def new_promo_code():
+    new_code = generate_code()
+    while new_code in promo_codes.keys():
+        new_code = generate_code()
+    promo_codes[new_code] = 0
+    return new_code
 
 
 class Student:
-    def __init__(self, fio):
+    def __init__(self, fio, any_message):
         self.fio = fio
+        self.user_id = any_message.from_user.id
+        self.user_name = any_message.from_user.username
         self.email = None
         self.balance = default_balance
         self.bool_promo_code = False    # ввел ли студент промокод
         self.given_promo_code = generate_code()
+        promo_codes[self.given_promo_code] = 0
         self.phase = REG
 
     def get_balance(self):
@@ -23,6 +42,7 @@ class Student:
 
     def change_fio(self, new_fio):
         self.fio = new_fio
+
 
 class Company:
     def __init__(self, name, info, balance):
