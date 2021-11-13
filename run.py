@@ -12,6 +12,7 @@ def start(message):
     if message.chat.id in STUDENTS.keys():
         bot.send_message(message.chat.id, 'Ты уже зарегистрировался! Хочешь внести изменения в свой профиль?',
                          reply_markup=keyboard_changes)
+        update_phase(message, CHANGE_REG_1)
         return
     bot.send_message(message.chat.id, welcome)
     print(f'Пользователь {message.from_user.username} запустил бота')
@@ -187,6 +188,9 @@ def check_reg(call):
     elif call.data == 'no_changes_needed':
         update_phase(call.message, READY)
         bot.send_message(call.message.chat.id, 'Изменения не внесены.', reply_markup=keyboard_back_menu)
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                          text=f'{call.message.text}',
+                          reply_markup=None, parse_mode="Markdown")
     bot.answer_callback_query(callback_query_id=call.id)
 
 
@@ -197,6 +201,9 @@ def change_reg(call):
     elif call.data == 'change_email':
         new_email(call.message)
     bot.answer_callback_query(callback_query_id=call.id)
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                          text=f'{call.message.text}',
+                          reply_markup=None, parse_mode="Markdown")
 
 
 @bot.message_handler(
