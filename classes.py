@@ -31,8 +31,17 @@ class Student:
         promo_codes[self.given_promo_code] = 0
         self.phase = REG
 
+    def sklonenie(self):
+        numb = self.balance % 100
+        if numb == 1 or numb % 10 == 1:
+            return 'коин'
+        if 2 <= numb <= 4:
+            return "коина"
+        if 5 <= numb <= 20 or numb % 10 != 1:
+            return 'коинов'
+
     def get_balance(self):
-        return f'Твой баланс составляет {self.balance} коинов. Участвуй в вебинарах и проявляй активность, ' \
+        return f'Твой баланс составляет {self.balance} {self.sklonenie()}. Участвуй в вебинарах и проявляй активность, ' \
                f'чтобы заработать больше.'
 
     def __repr__(self):

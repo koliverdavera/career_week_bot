@@ -2,6 +2,9 @@ import telebot
 from config import *
 from functions import *
 from variables import *
+import os
+from data.database import DATABASE_NAME
+from connect import create_database
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -13,9 +16,22 @@ def start(message):
                          reply_markup=keyboard_changes)
         update_phase(message, CHANGE_REG_1)
         return
-    bot.send_message(message.chat.id, welcome)
+    bot.send_message(message.chat.id, welcome, parse_mode='MarkDown')
     print(f'Пользователь {message.from_user.username} запустил бота')
     bot.register_next_step_handler(message, reg_name)
+
+
+def reg_name(message):
+    if not check_name(message):
+        bot.send_message(message.chat.id, 'Пожалуйста, введи ФИО еще раз в корректном формате!')
+        bot.register_next_step_handler(message, reg_name)
+        return
+    fio = message.text
+    new_student = Student(fio, message)
+    STUDENTS[message.chat.id] = new_student
+    bot.send_message(message.chat.id, 'Теперь введи электронную почту, с которой будешь регистрироваться'
+                                      ' на вебинары Недели Карьеры:')
+    bot.register_next_step_handler(message, reg_email)
 
 
 @bot.message_handler(func=lambda message: get_phase(message) == REG)
@@ -32,6 +48,33 @@ def reg_email(message):
     bot.send_message(message.chat.id, 'У тебя есть промокод от других участников Недели Карьеры? При его активации ты '
                                       'получишь 5 коинов.',
                      reply_markup=keyboard_promo)
+
+
+def activate_promo(message):
+    if get_phase(message) != ENTER_PROMO:
+        update_phase(message, READY)
+        bot.register_next_step_handler(message, menu)
+        return
+    code = message.text
+    if code not in promo_codes.keys():
+        if code == 'menu' or code == 'Меню':
+            return
+        bot.send_message(message.chat.id, 'Введенный промокод недействителен! Попробуй ввести другой',
+                         reply_markup=keyboard_back)
+        bot.register_next_step_handler(message, activate_promo)
+    elif STUDENTS[message.chat.id].bool_promo_code:
+        bot.send_message(message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
+        return
+    elif code == STUDENTS[message.chat.id].given_promo_code:
+        bot.send_message(message.chat.id, 'Ты не можешь активировать промокод, выданный тебе :(',
+                         reply_markup=keyboard_back)
+    else:
+        promo_codes[code] += 1
+        STUDENTS[message.chat.id].balance += 50
+        print(STUDENTS)
+        STUDENTS[message.chat.id].bool_promo_code = True
+        bot.send_message(message.chat.id, 'Промокод успешно активирован! На твой счет зачислено 50 коинов')
+        update_phase(message, READY)
 
 
 @bot.message_handler(func=lambda message: get_phase(message) == GIVE_PROMO)
@@ -150,4 +193,7 @@ def send_sticker(message):
 
 if __name__ == '__main__':
     set_env_functions(bot)
-    bot.infinity_polling(timeout=None)
+    db_is_created = os.path.exists(DATABASE_NAME)
+    if not db_is_created:
+        create_database()
+    # bot.infinity_polling(timeout=None)
