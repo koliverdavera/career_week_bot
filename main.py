@@ -1,17 +1,21 @@
 import telebot
-from config import *
+from data.config import *
 from functions import *
 from variables import *
 import os
-from data.database import DATABASE_NAME
-from connect import create_database
+from data.database import DATABASE_NAME, create_db
 
 bot = telebot.TeleBot(TOKEN)
 
 
+# @bot.callback_query_handler(func=lambda call: not get_phase(call.message))
+# def handle_none_type(call):
+#     menu(call.message)
+
+
 @bot.message_handler(commands=['start'])
 def start(message):
-    if message.chat.id in STUDENTS.keys():
+    if message.chat.id in update_students().keys():
         bot.send_message(message.chat.id, 'Ты уже зарегистрировался! Хочешь внести изменения в свой профиль?',
                          reply_markup=keyboard_changes)
         update_phase(message, CHANGE_REG_1)
@@ -27,8 +31,8 @@ def reg_name(message):
         bot.register_next_step_handler(message, reg_name)
         return
     fio = message.text
-    new_student = Student(fio, message)
-    STUDENTS[message.chat.id] = new_student
+    new_student = Student(message.chat.id, fio, message.from_user.username)
+    Session.add(new_student)
     bot.send_message(message.chat.id, 'Теперь введи электронную почту, с которой будешь регистрироваться'
                                       ' на вебинары Недели Карьеры:')
     bot.register_next_step_handler(message, reg_email)
@@ -42,8 +46,8 @@ def reg_email(message):
         bot.register_next_step_handler(message, reg_email)
         return
     bot.send_message(message.chat.id, about_coins)
-    STUDENTS[message.chat.id].email = message.text
-    print(f'Зарегистрирован студент {STUDENTS[message.chat.id]}')
+    Session.query(Student).get(message.chat.id).email = message.text
+    print(f'Зарегистрирован: {Session.query(Student).get(message.chat.id)}')
     update_phase(message, GIVE_PROMO)
     bot.send_message(message.chat.id, 'У тебя есть промокод от других участников Недели Карьеры? При его активации ты '
                                       'получишь 5 коинов.',
@@ -56,36 +60,36 @@ def activate_promo(message):
         bot.register_next_step_handler(message, menu)
         return
     code = message.text
-    if code not in promo_codes.keys():
+    if code not in update_promo_codes():
         if code == 'menu' or code == 'Меню':
             return
         bot.send_message(message.chat.id, 'Введенный промокод недействителен! Попробуй ввести другой',
                          reply_markup=keyboard_back)
         bot.register_next_step_handler(message, activate_promo)
-    elif STUDENTS[message.chat.id].bool_promo_code:
-        bot.send_message(message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
-        return
-    elif code == STUDENTS[message.chat.id].given_promo_code:
+    elif code == Session.query(Student).get(message.chat.id).promo_code:
         bot.send_message(message.chat.id, 'Ты не можешь активировать промокод, выданный тебе :(',
                          reply_markup=keyboard_back)
     else:
-        promo_codes[code] += 1
-        STUDENTS[message.chat.id].balance += 50
-        print(STUDENTS)
-        STUDENTS[message.chat.id].bool_promo_code = True
-        bot.send_message(message.chat.id, 'Промокод успешно активирован! На твой счет зачислено 50 коинов')
+        notify = Session.query(Student).filter(Student.promo_code == message.text).first()
+        bot.send_message(notify.chat_id, 'Другой пользователь активировал твой промокод! На твой счет зачислено '
+                                         '5 коинов :)', reply_markup=keyboard_menu)
+        notify.activations += 1
+        notify.balance += 5
+        Session.query(Student).get(message.chat.id).balance += 5
+        Session.query(Student).get(message.chat.id).entered_promo_code = True
+        bot.send_message(message.chat.id, 'Промокод успешно активирован! На твой счет зачислено 5 коинов',
+                         reply_markup=keyboard_menu)
         update_phase(message, READY)
 
 
 @bot.message_handler(func=lambda message: get_phase(message) == GIVE_PROMO)
 def new_promo(message):
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton(text='Дальше', callback_data='menu'))
-    bot.send_message(message.chat.id, f'Это твой уникальный промокод. Если другой участник при регистрации его'
-                                      f' активирует, ты также получишь 5 коинов. Приглашай друзей участвовать в Неделе '
-                                      f'Карьеры ВШБ! Промокод действителен на 5 применений:')
-    bot.send_message(message.chat.id, f'*{STUDENTS[message.chat.id].given_promo_code}*',
-                     reply_markup=kb, parse_mode="Markdown")
+    bot.send_message(message.chat.id, f'Ты успешно зарегистрирован! Вот твой уникальный промокод. Если другой '
+                                      f'участник Недели Карьеры при регистрации его '
+                                      f' активирует, ты получишь 5 коинов.\nПриглашай друзей участвовать в '
+                                      f'осенней Неделе Карьеры ВШБ! Промокод действителен на 5 применений:')
+    bot.send_message(message.chat.id, f'*{Session.query(Student).get(message.chat.id).promo_code}*',
+                     parse_mode="Markdown", reply_markup=keyboard_back_menu)
     update_phase(message, READY)
 
 
@@ -97,11 +101,20 @@ def handle_wrong_text(message):
 
 @bot.message_handler(func=lambda message: message.text == 'Меню')
 def menu(message):
-    bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu)
+    try:
+        if Session.query(Student).get(message.chat.id).entered_promo_code:
+            bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu_light)
+        else:
+            bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu)
+    except AttributeError:
+        bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu)
 
 
 @bot.callback_query_handler(func=lambda call: get_phase(call.message) == GIVE_PROMO or call.data == 'activate_promo')
 def is_promo_needed(call):
+    if Session.query(Student).get(call.message.chat.id).entered_promo_code:
+        bot.send_message(call.message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
+        return
     if call.data == 'activate_promo':
         bot.send_message(call.message.chat.id, 'Введи твой промокод:')
         update_phase(call.message, ENTER_PROMO)
@@ -124,25 +137,25 @@ def handle_back(call):
 @bot.callback_query_handler(func=lambda call: get_phase(call.message) == READY)
 def handle_menu(call):
     if call.data == 'event_calendar':
-        bot.send_message(call.message.chat.id, events, parse_mode="Markdown", reply_markup=keyboard_back)
+        bot.send_message(call.message.chat.id, event_calendar_str(), parse_mode="Markdown", reply_markup=keyboard_back)
     elif call.data == 'companies':
         bot.send_message(call.message.chat.id, 'Вот список компаний, сотрудничающих с ВШБ на осенней Неделе Карьеры. '
                                                'Нажмите на кнопку, чтобы почитать про компанию подробнее. ',
                          reply_markup=keyboard_companies)
     elif call.data == 'balance':
-        ans = STUDENTS[call.message.chat.id].get_balance()
+        ans = Session.query(Student).get(call.message.chat.id).get_balance()
         bot.send_message(call.message.chat.id, ans, reply_markup=keyboard_back)
     elif call.data == 'info':
-        bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back)
-    elif call.data in companies.keys():
-        for key, val in companies_list().items():
+        bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back, parse_mode='MarkDown')
+    elif call.data in companies_dict().keys():
+        for key, val in companies_dict().items():
             if call.data == key:
                 bot.send_message(call.message.chat.id, val, reply_markup=keyboard_back)
                 break
     elif call.data == 'change_reg':
         bot.send_message(call.message.chat.id, f"Данные твоего профиля сейчас:\n\n"
-                                               f"Твои ФИО:\n*{STUDENTS[call.message.chat.id].fio}*\n\n"
-                                               f"Твоя электронная почта:\n*{STUDENTS[call.message.chat.id].email}*"
+                                               f"Твои ФИО:\n*{Session.query(Student).get(call.message.chat.id).fio}*\n\n"
+                                               f"Твоя электронная почта:\n*{Session.query(Student).get(call.message.chat.id).email}*"
                                                f"\n\nОбрати внимание, что твоя почта должна совпадать с той, с которой "
                                                f"ты будешь регистрироваться на вебинары Недели Карьеры. В противном "
                                                f"случае мы не сможем начислить тебе коины :(", parse_mode='MarkDown')
@@ -191,9 +204,14 @@ def send_sticker(message):
     bot.send_sticker(message.chat.id, sticker)
 
 
+def create_database():
+    create_db()
+
+
 if __name__ == '__main__':
     set_env_functions(bot)
     db_is_created = os.path.exists(DATABASE_NAME)
     if not db_is_created:
         create_database()
-    # bot.infinity_polling(timeout=None)
+    print('vvf')
+    bot.infinity_polling(timeout=None)

@@ -1,6 +1,8 @@
 from variables import *
 import re
-from classes import Student
+from data.students import Student
+from data.events import Event
+from data.companies import Company
 
 
 def set_env_functions(real_bot):
@@ -18,7 +20,8 @@ def new_name(message):
         bot.register_next_step_handler(message, new_name)
         return
     bot.send_message(message.chat.id, 'Данные успешно обновлены!', reply_markup=keyboard_back_menu)
-    STUDENTS[message.chat.id].fio = message.text
+    Session.query(Student).get(message.chat.id).fio = message.text
+    Session.commit()
     update_phase(message, READY)
 
 
@@ -31,17 +34,39 @@ def new_email(message):
         bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
         bot.register_next_step_handler(message, new_email)
         return
-    STUDENTS[message.chat.id].email = message.text
+    Session.query(Student).get(message.chat.id).email = message.text
     update_phase(message, READY)
+    Session.commit()
     bot.send_message(message.chat.id, 'Данные успешно обновлены!', reply_markup=keyboard_back_menu)
 
 
+def update_students():
+    students = Session.query(Student)
+    students_dict = dict()
+    for it in students:
+        students_dict[it.chat_id] = it
+    return students_dict
+
+
+def update_promo_codes():
+    stud = update_students()
+    promo_codes = []
+    for student in stud.values():
+        promo_codes.append(student.promo_code)
+    return promo_codes
+
+
 def get_phase(message):
-    return STUDENTS[message.chat.id].phase
+    student = Session.query(Student).get(message.chat.id)
+    if student is None:
+        return False
+    return student.phase
 
 
 def update_phase(message, new_phase):
-    STUDENTS[message.chat.id].phase = new_phase
+    student = Session.query(Student).get(message.chat.id)
+    student.phase = new_phase
+    Session.commit()
 
 
 def check_email(message):
@@ -66,10 +91,5 @@ def check_name_name(name):
     return True
 
 
-def event_calendar():
-    return events
 
-
-def companies_list():
-    return companies
 
