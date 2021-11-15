@@ -95,7 +95,7 @@ def new_promo(message):
 
 @bot.message_handler(func=lambda message: get_phase(message) == READY)
 def handle_wrong_text(message):
-    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйтесь кнопками меню:')
+    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйся кнопками меню:')
     menu(message)
 
 
@@ -114,7 +114,7 @@ def is_promo_needed(call):
         bot.send_message(call.message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
         return
     if call.data == 'activate_promo':
-        bot.send_message(call.message.chat.id, 'Введи твой промокод:')
+        bot.send_message(call.message.chat.id, 'Введи промокод другого участника Недели Карьеры:')
         update_phase(call.message, ENTER_PROMO)
         bot.register_next_step_handler(call.message, activate_promo)
     elif call.data == 'skip_activate_promo':
@@ -150,7 +150,7 @@ def handle_menu(call):
         bot.send_message(call.message.chat.id, ans, reply_markup=keyboard_back)
         print(f'Пользователь {Session.query(Student).get(call.message.chat.id)} посмотрел свой баланс')
     elif call.data == 'info':
-        bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back, parse_mode='MarkDown')
+        bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back, parse_mode='HTML')
         print(f'Пользователь {Session.query(Student).get(call.message.chat.id)} посмотрел информацию о НК')
     elif call.data in companies_dict().keys():
         comp = companies_dict()
@@ -158,7 +158,7 @@ def handle_menu(call):
             if call.data == key:
                 bot.send_message(call.message.chat.id, val, reply_markup=keyboard_back)
                 print(f'Пользователь {Session.query(Student).get(call.message.chat.id)} посмотрел информацию о '
-                        f'компании {key}')
+                      f'компании {key}')
                 break
     elif call.data == 'change_reg':
         bot.send_message(call.message.chat.id, f"Данные твоего профиля сейчас:\n\n"
