@@ -148,7 +148,8 @@ def handle_menu(call):
     elif call.data == 'info':
         bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back, parse_mode='MarkDown')
     elif call.data in companies_dict().keys():
-        for key, val in companies_dict().items():
+        comp = companies_dict()
+        for key, val in comp.items():
             if call.data == key:
                 bot.send_message(call.message.chat.id, val, reply_markup=keyboard_back)
                 break
@@ -213,5 +214,5 @@ if __name__ == '__main__':
     db_is_created = os.path.exists(DATABASE_NAME)
     if not db_is_created:
         create_database()
-    print('vvf')
+    print('Бот успешно запущен')
     bot.infinity_polling(timeout=None)

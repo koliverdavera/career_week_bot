@@ -50,7 +50,7 @@ class Student(Base):
                f'чтобы заработать больше.'
 
     def __repr__(self):
-        return f'Студент: {self.fio}, почта: {self.email}, баланс: {self.balance}, ' \
+        return f'cтудент {self.fio}, почта: {self.email}, баланс: {self.balance}, ' \
                f'применил ли промокод: {"Да" if self.entered_promo_code else "Нет"}, ' \
                f'выданный промокод: {self.promo_code}, фаза: {self.phase}'
 
