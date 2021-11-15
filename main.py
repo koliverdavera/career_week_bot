@@ -20,7 +20,7 @@ def start(message):
                          reply_markup=keyboard_changes)
         update_phase(message, CHANGE_REG_1)
         return
-    bot.send_message(message.chat.id, welcome, parse_mode='MarkDown')
+    bot.send_message(message.chat.id, welcome, parse_mode='HTML')
     print(f'Пользователь {message.from_user.username} запустил бота')
     bot.register_next_step_handler(message, reg_name)
 
