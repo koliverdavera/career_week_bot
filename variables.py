@@ -13,13 +13,12 @@ mail_pattern = '[a-zA-Z0-9\-._]{3,25}@(gmail|mail|ya|yandex|yahoo|outlook|hse|ed
 
 
 def event_calendar_str():
-    result = f'=)'
+    result = f''
     events_db = Session.query(Event)
-    events = dict()
     for event in events_db:
-        result += f'🔺{event.name}\n🔹{event.datetime}\n' \
+        result += f'🔺{event.name}\n🔹{event.datetime},\n' \
+                  f'🔹{event.description if event.description is not None else "Описание появится позже!"}\n' \
                   f'🔹{event.link if event.link is not None else "Ссылка появится позже!"}\n\n'
-        events[event.name] = [event.description, event.link]
     return result
 
 
