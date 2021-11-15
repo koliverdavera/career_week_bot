@@ -71,6 +71,10 @@ def activate_promo(message):
                          reply_markup=keyboard_back)
     else:
         notify = Session.query(Student).filter(Student.promo_code == message.text).first()
+        if notify.activations == 5:
+            bot.send_message(message.chat.id, 'Этот промокод применили уже 5 раз, больше нельзя :(',
+                             reply_markup=keyboard_back)
+            return
         bot.send_message(notify.chat_id, 'Другой пользователь активировал твой промокод! На твой счет зачислено '
                                          '5 коинов :)', reply_markup=keyboard_menu)
         notify.activations += 1
