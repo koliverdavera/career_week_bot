@@ -93,7 +93,7 @@ def new_promo(message):
                                       f' активирует, ты получишь 5 коинов.\nПриглашай друзей участвовать в '
                                       f'осенней Неделе Карьеры ВШБ! Промокод действителен на 5 применений:')
     bot.send_message(message.chat.id, f'*{Session.query(Student).get(message.chat.id).promo_code}*',
-                     parse_mode="Markdown", reply_markup=keyboard_back_menu)
+                     parse_mode="Markdown", reply_markup=keyboard_menu)
     update_phase(message, READY)
 
 
