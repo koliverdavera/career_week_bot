@@ -103,11 +103,9 @@ def handle_wrong_text(message):
 def menu(message):
     try:
         if Session.query(Student).get(message.chat.id).entered_promo_code:
-            bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu_light)
-        else:
-            bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu)
+            bot.send_message(message.chat.id, 'Выбери пункт меню:', reply_markup=keyboard_menu_light)
     except AttributeError:
-        bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=keyboard_menu)
+        bot.send_message(message.chat.id, 'Выбери пункт меню:', reply_markup=keyboard_menu)
 
 
 @bot.callback_query_handler(func=lambda call: get_phase(call.message) == GIVE_PROMO or call.data == 'activate_promo')
@@ -138,20 +136,29 @@ def handle_back(call):
 def handle_menu(call):
     if call.data == 'event_calendar':
         bot.send_message(call.message.chat.id, event_calendar_str(), parse_mode="Markdown", reply_markup=keyboard_back)
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} посмотрел календарь')
+    elif call.data == 'rules':
+        bot.send_message(call.message.chat.id, rules, reply_markup=keyboard_back, parse_mode='MarkDown')
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} посмотрел правила игры')
     elif call.data == 'companies':
         bot.send_message(call.message.chat.id, 'Вот список компаний, сотрудничающих с ВШБ на осенней Неделе Карьеры. '
                                                'Нажмите на кнопку, чтобы почитать про компанию подробнее. ',
                          reply_markup=keyboard_companies)
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} посмотрел список компаний')
     elif call.data == 'balance':
         ans = Session.query(Student).get(call.message.chat.id).get_balance()
         bot.send_message(call.message.chat.id, ans, reply_markup=keyboard_back)
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} посмотрел свой баланс')
     elif call.data == 'info':
         bot.send_message(call.message.chat.id, info, reply_markup=keyboard_back, parse_mode='MarkDown')
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} посмотрел информацию о НК')
     elif call.data in companies_dict().keys():
         comp = companies_dict()
         for key, val in comp.items():
             if call.data == key:
                 bot.send_message(call.message.chat.id, val, reply_markup=keyboard_back)
+                print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} посмотрел информацию о '
+                        f'компании {key}')
                 break
     elif call.data == 'change_reg':
         bot.send_message(call.message.chat.id, f"Данные твоего профиля сейчас:\n\n"
@@ -162,6 +169,7 @@ def handle_menu(call):
                                                f"случае мы не сможем начислить тебе коины :(", parse_mode='MarkDown')
         bot.send_message(call.message.chat.id, 'Ты хочешь отредактировать свой профиль?',
                          reply_markup=keyboard_changes)
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} просмотрел свой профиль')
         update_phase(call.message, CHANGE_REG_1)
     else:
         bot.send_message(call.message.chat.id, 'Пожалуйста, воспользуйтесь кнопками меню:')
@@ -187,8 +195,10 @@ def check_reg(call):
 def change_reg(call):
     if call.data == 'change_fio':
         new_name(call.message)
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} изменил ФИО')
     elif call.data == 'change_email':
         new_email(call.message)
+        print(f'Пользователь {Session.query(Student).get(call.message.chat.id).first()} изменил свою почту')
     bot.answer_callback_query(callback_query_id=call.id)
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
                           text=f'{call.message.text}',
