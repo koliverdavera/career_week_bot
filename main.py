@@ -155,7 +155,7 @@ def handle_menu(call):
     elif call.data == 'companies':
         bot.send_message(call.message.chat.id, 'Вот список компаний, сотрудничающих с ВШБ на осенней Неделе Карьеры. '
                                                'Нажмите на кнопку, чтобы почитать про компанию подробнее. ',
-                         reply_markup=keyboard_companies)
+                         reply_markup=get_kb_companies())
         print(f'Пользователь {Session.query(Student).get(call.message.chat.id)} посмотрел список компаний')
     elif call.data == 'balance':
         ans = Session.query(Student).get(call.message.chat.id).get_balance()
@@ -238,7 +238,7 @@ if __name__ == '__main__':
             bot.infinity_polling(timeout=None)
         except Exception as e:
             import time
-            traceback.prin_exc()
+            traceback.print_exc()
             bot.send_message(1332218928, traceback.format_exc())
             bot.stop_polling()
             time.sleep(5)
