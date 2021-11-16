@@ -9,4 +9,4 @@ threadpoolctl==2.2.0
 urllib3==1.26.6
 pytelegrambotapi==4.2.0
 charset-normalizer~=2.0.0
-psycopg2==2-2.9.1
+psycopg2==2.9.1
