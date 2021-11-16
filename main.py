@@ -4,6 +4,11 @@ from functions import *
 from variables import *
 import os
 from data.database import DATABASE_NAME, create_db
+import traceback
+from create_database import create_database
+from data.events import Event
+from data.students import Student
+from data.companies import Company
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -93,13 +98,13 @@ def new_promo(message):
                                       f' активирует, ты получишь 5 коинов.\nПриглашай друзей участвовать в '
                                       f'осенней Неделе Карьеры ВШБ! Промокод действителен на 5 применений:')
     bot.send_message(message.chat.id, f'*{Session.query(Student).get(message.chat.id).promo_code}*',
-                     parse_mode="Markdown", reply_markup=keyboard_menu)
+                     parse_mode="Markdown", reply_markup=keyboard_back_menu)
     update_phase(message, READY)
 
 
 @bot.message_handler(func=lambda message: get_phase(message) == READY)
 def handle_wrong_text(message):
-    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйся кнопками меню:')
+    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйся кнопками ниже!:')
     menu(message)
 
 
@@ -108,6 +113,8 @@ def menu(message):
     try:
         if Session.query(Student).get(message.chat.id).entered_promo_code:
             bot.send_message(message.chat.id, 'Выбери пункт меню:', reply_markup=keyboard_menu_light)
+        else:
+            bot.send_message(message.chat.id, 'Выбери пункт меню:', reply_markup=keyboard_menu)
     except AttributeError:
         bot.send_message(message.chat.id, 'Выбери пункт меню:', reply_markup=keyboard_menu)
 
@@ -118,7 +125,8 @@ def is_promo_needed(call):
         bot.send_message(call.message.chat.id, 'Ты уже активировал промокод!', reply_markup=keyboard_back)
         return
     if call.data == 'activate_promo':
-        bot.send_message(call.message.chat.id, 'Введи промокод другого участника Недели Карьеры:')
+        bot.send_message(call.message.chat.id, 'Введи промокод другого участника Недели Карьеры:',
+                         reply_markup=keyboard_back)
         update_phase(call.message, ENTER_PROMO)
         bot.register_next_step_handler(call.message, activate_promo)
     elif call.data == 'skip_activate_promo':
@@ -219,14 +227,18 @@ def send_sticker(message):
     bot.send_sticker(message.chat.id, sticker)
 
 
-def create_database():
-    create_db()
-
-
 if __name__ == '__main__':
     set_env_functions(bot)
     db_is_created = os.path.exists(DATABASE_NAME)
     if not db_is_created:
         create_database()
     print('Бот успешно запущен')
-    bot.infinity_polling(timeout=None)
+    while True:
+        try:
+            bot.infinity_polling(timeout=None)
+        except Exception as e:
+            import time
+            traceback.prin_exc()
+            bot.send_message(1332218928, traceback.format_exc())
+            bot.stop_polling()
+            time.sleep(5)

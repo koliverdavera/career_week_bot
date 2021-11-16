@@ -96,13 +96,21 @@ b1 = types.InlineKeyboardButton(text='Да', callback_data='changes_needed')
 b2 = types.InlineKeyboardButton(text='Нет', callback_data='no_changes_needed')
 keyboard_changes.add(b1, b2)
 
-keyboard_companies = types.InlineKeyboardMarkup(row_width=2)
-buttons = []
-for key, val in companies_dict().items():
-    new_button = types.InlineKeyboardButton(text=key, callback_data=key)
-    buttons.append(new_button)
-keyboard_companies.add(*buttons)
-keyboard_companies.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
+
+def get_kb_companies():
+    keyboard_companies = types.InlineKeyboardMarkup(row_width=2)
+    buttons = []
+    for key, val in companies_dict().items():
+        new_button = types.InlineKeyboardButton(text=key, callback_data=key)
+        buttons.append(new_button)
+    keyboard_companies.add(*buttons)
+    keyboard_companies.add(types.InlineKeyboardButton(text='Назад', callback_data='menu'))
+    return keyboard_companies
+
+
+if __name__ == '__main__':
+    keyboard_companies = get_kb_companies()
+
 
 keyboard_change_reg = types.InlineKeyboardMarkup()
 b1 = types.InlineKeyboardButton(text='Изменить ФИО', callback_data='change_fio')
