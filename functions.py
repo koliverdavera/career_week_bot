@@ -59,7 +59,7 @@ def update_promo_codes():
 def get_phase(message):
     student = Session.query(Student).get(message.chat.id)
     if student is None:
-        return False
+        return -1
     return student.phase
 
 

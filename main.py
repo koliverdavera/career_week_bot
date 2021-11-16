@@ -13,9 +13,18 @@ from data.companies import Company
 bot = telebot.TeleBot(TOKEN)
 
 
-# @bot.callback_query_handler(func=lambda call: not get_phase(call.message))
-# def handle_none_type(call):
-#     menu(call.message)
+@bot.callback_query_handler(func=lambda call: get_phase(call.message) == -1)
+def handle_none_type(call):
+    bot.send_message(call.message.chat.id, 'Произошла ошибка, нужно еще раз зарегистрироваться... Пожалуйста, введи '
+                                           'ФИО:')
+    bot.register_next_step_handler(call.message, reg_name)
+
+
+@bot.message_handler(func=lambda message: get_phase(message) == -1)
+def handle_none_type(message):
+    bot.send_message(message.chat.id, 'Произошла ошибка, нужно еще раз зарегистрироваться... Пожалуйста, введи '
+                                           'ФИО:')
+    bot.register_next_step_handler(message, reg_name)
 
 
 @bot.message_handler(commands=['start'])
@@ -46,7 +55,6 @@ def reg_name(message):
 @bot.message_handler(func=lambda message: get_phase(message) == REG)
 def reg_email(message):
     if not check_email(message):
-        bot.delete_message(message.chat.id, message_id=message.id)
         bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
         bot.register_next_step_handler(message, reg_email)
         return
