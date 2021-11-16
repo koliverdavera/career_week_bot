@@ -52,7 +52,7 @@ class Student(Base):
                f'тебе в начале регистрации ({self.promo_code}), то вы оба получите по 5 коинов :)'
 
     def __repr__(self):
-        return f'cтудент {self.fio}, почта: {self.email}, баланс: {self.balance}, ' \
+        return f'cтудент {self.fio}, chat_id: {self.chat_id}, почта: {self.email}, баланс: {self.balance}, ' \
                f'применил ли промокод: {"Да" if self.entered_promo_code else "Нет"}, ' \
                f'выданный промокод: {self.promo_code}, фаза: {self.phase}'
 
