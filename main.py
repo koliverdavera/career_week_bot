@@ -50,7 +50,7 @@ def reg_name(message):
     bot.send_message(message.chat.id, 'Теперь введи электронную почту, с которой будешь регистрироваться'
                                       ' на вебинары Недели Карьеры:')
     bot.register_next_step_handler(message, reg_email)
-
+''''''
 
 @bot.message_handler(func=lambda message: get_phase(message) == REG)
 def reg_email(message):
