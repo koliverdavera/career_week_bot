@@ -55,7 +55,8 @@ def reg_name(message):
 @bot.message_handler(func=lambda message: get_phase(message) == REG)
 def reg_email(message):
     if not check_email(message):
-        bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту!')
+        bot.send_message(message.chat.id, 'Пожалуйста, введи корректную почту! Если ты студент ВШЭ,'
+                                          ' предпочтительно использовать корпоративную почту.')
         bot.register_next_step_handler(message, reg_email)
         return
     bot.send_message(message.chat.id, about_coins)
