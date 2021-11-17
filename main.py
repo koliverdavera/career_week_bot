@@ -112,7 +112,7 @@ def new_promo(message):
 
 @bot.message_handler(func=lambda message: get_phase(message) == READY)
 def handle_wrong_text(message):
-    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйся кнопками ниже!:')
+    bot.send_message(message.chat.id, 'Пожалуйста, воспользуйся кнопками ниже!')
     menu(message)
 
 
