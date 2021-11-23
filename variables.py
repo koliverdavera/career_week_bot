@@ -8,8 +8,9 @@ Session = session()
 
 default_balance = 2
 
-REG, GIVE_PROMO, ENTER_PROMO, READY, CHANGE_REG_1, CHANGE_REG_2 = range(6)
+REG, GIVE_PROMO, ENTER_PROMO, READY, CHANGE_REG_1, CHANGE_REG_2, READY_2, ASSESS, MAKE_ORDER = range(9)
 mail_pattern = '[a-zA-Z0-9\-._]{3,25}@(gmail|mail|ya|yandex|yahoo|outlook|hse|edu\.hse|)\.(ru|net|com|ua)'
+# READY_2 - промежуточное состояние, откуда можно перейти к оценке компаний + посмотреть каталог мерча
 
 
 def event_calendar_str():
@@ -108,3 +109,29 @@ keyboard_menu.add(b1, b2, b3, b4, b5, b6, b7)
 
 keyboard_menu_light = types.InlineKeyboardMarkup(row_width=2)
 keyboard_menu_light.add(b1, b2, b3, b4, b6, b7)
+
+
+final_intro = 'Спасибо тебе за участие в Неделе Карьеры! Ты хорошо проявил себя. Наконец-то можно обменять ' \
+              'заработанные коины на мерч ВШБ!\nПо правилам игры, прежде чем сделать заказ на мерч, ' \
+              'студенты должны оценить работодателей. Ты должен распределить 10 процентов от заработанных тобой коинов ' \
+              'между компаниями, тогда разблокируется основная сумма твоего кошелька, которую ты сможешь потратить ' \
+              'на мерч.\nЭто так называемый "налог на успех", а по итогам студенческих оценок ' \
+              'Центр Карьеры сформирует рейтинг работодателей.'
+
+keyboard_final = types.InlineKeyboardMarkup()
+keyboard_final.add(types.InlineKeyboardButton(text='Оценить компании', callback_data='assess'))
+                  # types.InlineKeyboardButton(text='Каталог мерча', callback_data='catalog'))
+
+
+def get_kb_assess():
+    keyboard_companies = types.InlineKeyboardMarkup(row_width=2)
+    buttons = []
+    for key, val in companies_dict().items():
+        new_button = types.InlineKeyboardButton(text=key, callback_data=f'{key}')
+        buttons.append(new_button)
+    keyboard_companies.add(*buttons)
+    return keyboard_companies
+
+
+kb_assess_2 = types.InlineKeyboardMarkup()
+kb_assess_2.add(types.InlineKeyboardButton(text='Дальше', callback_data='check_assess'))

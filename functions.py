@@ -1,6 +1,6 @@
 from variables import *
 import re
-from data.students import Student
+from data.students import *
 from data.events import Event
 from data.companies import Company
 
@@ -69,6 +69,11 @@ def update_phase(message, new_phase):
     Session.commit()
 
 
+def update_wal1(message):
+    stud = Session.query(Student).get(message.chat.id)
+    stud.update_wal()
+
+
 def check_email(message):
     if re.fullmatch(mail_pattern, message.text):
         return True
@@ -91,5 +96,52 @@ def check_name_name(name):
     return True
 
 
+def catalog():
+    pass
+    #Session.get(Catalog)
 
 
+def assess(message, stud):
+    bot.send_message(message.chat.id, 'Выбери компанию, вебинары которой тебе показались наиболее интересными:',
+                     reply_markup=get_kb_assess())
+
+
+def enter_coins(message, key, stud):
+    try:
+        coins = int(message.text)
+        if coins <= 0:
+            raise ValueError
+        if coins > stud.wal1:
+            raise ValueError
+    except ValueError:
+        bot.send_message(stud.chat_id, f'Ты можешь перевести компании от 1 до {stud.wal1} коинов, введи число еще раз:')
+        bot.register_next_step_handler(message, enter_coins, key, stud)
+        return
+    admit_coins(coins, key, stud)
+    bot.send_message(message.chat.id, 'Перевод успешно выполнен!')
+    check_if_assessed(message, stud)
+
+
+def check_if_assessed(message, stud):
+    if stud.wal1 > 0:
+        bot.send_message(stud.chat_id, f'Тебе нужно распределить еще {stud.wal1} {sklonenie_func(stud.wal1)}')
+        assess(message, stud)
+    else:
+        stud = Session.query(Student).get(stud.chat_id)
+        stud.assessed = True
+        Session.commit()
+        print(f'Студент {stud} распределил 10 % кошелька между компаниями.')
+        bot.send_message(stud.chat_id, f'Ты распределил свои коины между компаниями и теперь можешь обменять'
+                                       f' основную сумму счета ({stud.balance} {sklonenie_func(stud.balance)}) на мерч! '
+                                       f'Скоро мы пришлем тебе ссылку для просмотра каталога мерча и оформления заказа.'
+                                       f' Спасибо за участие в Неделе Карьеры :)')
+
+
+def admit_coins(coins, key, stud):
+    company = Session.query(Company).filter(Company.name == key).one()
+    company.balance += coins
+    stud = Session.query(Student).get(stud.chat_id)
+    stud.wal1 -= coins
+    stud.balance -= coins
+    print(f'{stud} начислил компании {company.name} {coins} коинов')
+    Session.commit()

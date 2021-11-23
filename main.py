@@ -3,14 +3,27 @@ from data.config import *
 from functions import *
 from variables import *
 import os
-from data.database import DATABASE_NAME, create_db
+from data.database import DATABASE_NAME
 import traceback
 from create_database import create_database
-from data.events import Event
 from data.students import Student
-from data.companies import Company
+
 
 bot = telebot.TeleBot(TOKEN)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'go_to_final')
+def go_to_final(call):
+    student = Session.query(Student).get(call.message.chat.id)
+    # update_phase(call.message, READY)
+    if get_phase(call.message) > 2:
+        update_phase(call.message, READY_2)
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              text=f'{call.message.text}', reply_markup=None)
+        bot.send_message(call.message.chat.id, final_intro)
+        bot.send_message(call.message.chat.id, f'Твой баланс составляет {student.get_balance_light()}.\n'
+                                               f'{student.wallets()}',
+                         reply_markup=keyboard_final, parse_mode='MarkDown')
 
 
 @bot.callback_query_handler(func=lambda call: get_phase(call.message) == -1)
@@ -24,6 +37,7 @@ def handle_none_type(call):
 def handle_none_type(message):
     bot.send_message(message.chat.id, 'Произошла ошибка, нужно еще раз зарегистрироваться... Пожалуйста, введи '
                                            'ФИО:')
+    print(message.chat.id)
     bot.register_next_step_handler(message, reg_name)
 
 
@@ -50,7 +64,7 @@ def reg_name(message):
     bot.send_message(message.chat.id, 'Теперь введи электронную почту, с которой будешь регистрироваться'
                                       ' на вебинары Недели Карьеры:')
     bot.register_next_step_handler(message, reg_email)
-''''''
+
 
 @bot.message_handler(func=lambda message: get_phase(message) == REG)
 def reg_email(message):
@@ -194,6 +208,7 @@ def handle_menu(call):
         update_phase(call.message, CHANGE_REG_1)
     else:
         bot.send_message(call.message.chat.id, 'Пожалуйста, воспользуйтесь кнопками меню:')
+        print(call.message.chat.id)
         menu(call.message)
     bot.answer_callback_query(callback_query_id=call.id)
 
@@ -236,6 +251,30 @@ def send_sticker(message):
     bot.send_sticker(message.chat.id, sticker)
 
 
+@bot.callback_query_handler(func=lambda call: get_phase(call.message) == READY_2)
+def assess_or_merch(call):
+    if call.data == 'assess':
+        update_phase(call.message, ASSESS)
+        update_wal1(call.message)
+        print(f'{Session.query(Student).get(call.message.chat.id)} перешел к оценкам компаний')
+        assess(call.message, None)
+    bot.answer_callback_query(callback_query_id=call.id)
+    # elif call.data == 'catalog':
+    #     catalog(call.message)
+
+
+@bot.callback_query_handler(func=lambda call: get_phase(call.message) == ASSESS)
+def assess_1(call):
+    companies = companies_dict()
+    stud = Session.query(Student).get(call.message.chat.id)
+    for key in companies.keys():
+        if key == call.data:
+            bot.send_message(call.message.chat.id, 'Сколько коинов ты хочешь перевести выбранной компании?')
+            bot.register_next_step_handler(call.message, enter_coins, key, stud)
+            bot.answer_callback_query(callback_query_id=call.id)
+            return
+
+
 if __name__ == '__main__':
     set_env_functions(bot)
     db_is_created = os.path.exists(DATABASE_NAME)
@@ -244,10 +283,14 @@ if __name__ == '__main__':
     print('Бот успешно запущен')
     while True:
         try:
+            Session.rollback()
             bot.infinity_polling(timeout=None)
         except Exception as e:
             import time
             traceback.print_exc()
-            bot.send_message(1332218928, traceback.format_exc())
-            bot.stop_polling()
+            bot.send_message(426184690, traceback.format_exc())
+            del bot
+            bot = telebot.TeleBot(real)
+            Session.rollback()
             time.sleep(5)
+            
