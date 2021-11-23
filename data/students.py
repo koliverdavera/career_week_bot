@@ -45,6 +45,8 @@ class Student(Base):
 
     def update_wal(self):  #10 процентов счета, метод вызывается, когда поользователь переходит к оценке компаний
         self.wal1 = int(0.1 * self.balance)
+        if self.wal1 == 0:
+            self.wal1 = 1
 
     def sklonenie(self):
         numb = self.balance % 100
