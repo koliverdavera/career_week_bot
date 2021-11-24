@@ -132,10 +132,9 @@ def check_if_assessed(message, stud):
         Session.commit()
         print(f'Студент {stud} распределил 10 % кошелька между компаниями.')
         bot.send_message(stud.chat_id, f'Ты распределил свои коины между компаниями и теперь можешь обменять'
-                                       f' основную сумму счета ({stud.balance} {sklonenie_func(stud.balance)}) на мерч! '
-                                       f'Затвра в 13.00 откроется кошелек, мы пришлем тебе ссылку для просмотра '
-                                       f'каталога мерча и оформления заказа.'
-                                       f' Спасибо за участие в Неделе Карьеры :)')
+                                       f' основную сумму счета ({stud.balance} {sklonenie_func(stud.balance)}) на мерч!\n'
+                                       f'Переходи по ссылке и оформляй заказ!\nhttps://docs.google.com/forms/d/e/1FAIpQLSdocdxJaXBGHGDhcssgJoip1WiuTZ5SjiV--82mjxssw2fkLw/viewform\n'
+                                       f'Спасибо за участие в Неделе Карьеры :)')
 
 
 def admit_coins(coins, key, stud):
