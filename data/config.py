@@ -2,5 +2,5 @@
 
 test = ''
 real = ''
-DATABASE_NAME = 'd7acfhm3rlibk9'
+DATABASE_NAME = ''
 TOKEN = real
