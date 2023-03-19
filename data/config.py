@@ -1,6 +1,4 @@
-
-
-test = '2129108100:AAH_atAWSLmWPCYAhR1NopPQhJzEwk7N8Gc'
-real = '2001559396:AAHXCIe8ssqhpBx_8Kt6kLF_OYsgRQnvKbQ'
-DATABASE_NAME = 'd7acfhm3rlibk9'
+test = ''
+real = ''
+DATABASE_NAME = ''
 TOKEN = real

@@ -15,7 +15,6 @@ bot = telebot.TeleBot(TOKEN)
 @bot.callback_query_handler(func=lambda call: call.data == 'go_to_final')
 def go_to_final(call):
     student = Session.query(Student).get(call.message.chat.id)
-    # update_phase(call.message, READY)
     if get_phase(call.message) > 2:
         update_phase(call.message, READY_2)
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
@@ -284,11 +283,10 @@ if __name__ == '__main__':
     while True:
         try:
             Session.rollback()
-            bot.infinity_polling(timeout=None)
+            bot.polling(none_stop=True)
         except Exception as e:
             import time
             traceback.print_exc()
-            bot.send_message(426184690, traceback.format_exc())
             del bot
             bot = telebot.TeleBot(real)
             Session.rollback()
